@@ -104,7 +104,7 @@ function my_image_metabox_callback($post) {
         $image_url = $image_src[0];
         ?>
         <div class="image-preview">
-            <img src=<?php echo $image_url; ?> ></div>
+            <img src=<?php echo $image_url; ?>  class="remove-image"></div>
         <?php
     }
     // Retrieve saved metadata
@@ -150,7 +150,6 @@ function picperfect_display_image_view($atts){
     ob_start();
     $atts=shortcode_atts(array(
         'id'=>'',
-        // 'view'=>'',
     ),$atts);
 
   $setting_view = get_option('image_settings'); 
