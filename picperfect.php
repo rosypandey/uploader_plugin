@@ -92,17 +92,31 @@ add_action('add_meta_boxes', 'my_image_metabox');
  */
 function my_image_metabox_callback($post) {
     wp_enqueue_script('pic_script');
+    $args = array(
+        'post_type' => 'attachment',
+        'post_mime_type' => 'image',
+        'post_parent' => $post->ID,
+    );
+    // print_r($args);
+    $attachments = get_posts($args);
+    foreach ($attachments as $attachment) {
+        $image_src = wp_get_attachment_image_src($attachment->ID, 'thumbnail');
+        $image_url = $image_src[0];
+        ?>
+        <div class="image-preview">
+            <img src=<?php echo $image_url; ?> ></div>
+        <?php
+    }
     // Retrieve saved metadata
     $images = get_post_meta($post->ID, 'my_image_metabox_images', true);
- 
     // Display the uploaded images
     if ($images) {
         foreach ($images as $image) {
-            echo '<div class="image-preview">';
+            echo '<div class="image-preview ">';
             echo '<img src="' . $image . '" alt="Image Preview" />';
             echo '</div>';
         }
-    }
+    } 
 
     ?>
         <!-- Add the Upload button -->
@@ -136,37 +150,35 @@ function picperfect_display_image_view($atts){
     ob_start();
     $atts=shortcode_atts(array(
         'id'=>'',
-        'view'=>'',
+        // 'view'=>'',
     ),$atts);
-    $post_per_page=get_option('image_settings');
 
-    $posts_per_page = isset( $post_per_page['num_photo'] ) ? $post_per_page['num_photo'] : '';
+  $setting_view = get_option('image_settings'); 
 
     // Query attachments from the database
     $args = array(
         'post_type' => 'attachment',
         'post_mime_type' => 'image',
         'post_parent' => $atts['id'],
-        'posts_per_page'=>$posts_per_page,
     );
     $attachments = get_posts($args);
 
-    if ( $atts['view'] === 'slider' ){
+    if ( $setting_view === 'slider' ){
         ?>
             <div class="swiper mySwiper">
                 <div class="swiper-wrapper">
         <?php
     }
 
-    if ( $atts['view'] === 'grid' ) {
+    if ( $setting_view === 'grid' ) {
         include( 'templates/pic_grid.php' );
-    } elseif( $atts['view'] === 'slider' ) {
+    } elseif( $setting_view === 'slider' ) {
         include( 'templates/pic_slider.php' );
-    } else {
+    } elseif( $setting_view === 'normal' ) {
         include( 'templates/pic_normal.php' );
     }
 
-    if ( $atts['view'] === 'slider' ){
+    if ( $setting_view === 'slider' ){
         ?>
             </div>
                 <div class="swiper-button-next"></div>
@@ -200,18 +212,43 @@ add_action('admin_menu','picperfect_setting_submenu');
  */
 function picperfect_setting_callback(){
     // to display content 
-    $post_per_page=get_option('image_settings');
-    $posts_per_page = isset( $post_per_page['num_photo'] ) ? $post_per_page['num_photo'] : '';
-    $checkbox_value = isset( $post_per_page['enable_image_download'] ) ? $post_per_page['enable_image_download'] : 'off';
+    $post_view=get_option('image_settings');
+    // echo "<pre>";
+    // print_r($post_view);
+    // $checkbox_value = isset( $post_view['enable_slider_view'] ) ? $post_view['enable_slider_view'] : 'off';
 
     ?>
         <h1>Image Settings</h1>
         <form method='post'>
-        <label for="num_photo"><strong>No of photos to display</strong></label><br>
-        <input type="number" id="num_photo" name="num_photo" min="1" max="20" value="<?php echo $posts_per_page; ?>"><br><br>
-        <input type="checkbox" id="checkbox1" name="enable_image_download" <?php checked( 'on', $checkbox_value );  ?> >
-        <label for="checkbox1"><strong>Enable image download</strong></label><br><br>
-        <input type='submit'  id='submit' value='save changes' name='save'/>
+            <label for="grid_view">
+            <input type="radio" name="view_type" id="grid_view" value="grid" 
+                <?php
+                    if($post_view == 'grid'){
+                        echo 'checked';
+                    }
+                ?>
+            /> Enable Grid View
+            </label><br><br>
+    
+            <label for="slider_view">
+                <input type="radio" name="view_type" id="slider_view" value="slider"
+                    <?php
+                        if($post_view == 'slider'){
+                            echo 'checked';
+                        }
+                    ?>
+                /> Enable Slider View
+            </label><br><br>
+            <label for="normal_view">
+                <input type="radio" name="view_type" id="normal_view" value="normal"
+                    <?php
+                        if($post_view == 'normal'){
+                            echo 'checked';
+                        }
+                    ?>
+                /> Enable normal View
+            </label><br><br>
+            <input type='submit'  id='submit' value='save changes' name='save'/>
        </form>
     <?php
    
@@ -220,14 +257,16 @@ function picperfect_setting_callback(){
 /*
  * Save form data in database.
  */
-function picperfect_save_settings(){
- // To save datas in database.
- if( isset($_POST['save']) ) {
-    // print_r($_POST);
-    $Postdata = array();
-    $Postdata['num_photo']=sanitize_text_field($_POST['num_photo']);
-    $Postdata['enable_image_download']=isset($_POST['enable_image_download'])?$_POST['enable_image_download']:'off';
-    update_option('image_settings', $Postdata);
+function picperfect_save_settings() {
+    // Check if the 'save' button was clicked
+    if (isset($_POST['save'])) {
+        // Check if the 'view_type' radio button is set
+        if (isset($_POST['view_type'])) {
+            // Sanitize the input to prevent any potential security issues
+            $view_type = sanitize_text_field($_POST['view_type']);
+            // Save the 'view_type' value in the database
+            update_option('image_settings', $view_type);
+        }
+    }
 }
-}
-add_action('admin_init','picperfect_save_settings');
+add_action('admin_init', 'picperfect_save_settings');
