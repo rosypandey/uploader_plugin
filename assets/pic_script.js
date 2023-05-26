@@ -99,9 +99,23 @@
             $(document).on('click', '.remove-image', function() {
                 var imageContainer = $(this).closest('.image-preview');
                 var imageUrl = imageContainer.find('img').attr('src');
-                // Remove the image preview and update the hidden field value
-                imageContainer.remove();
-                updateHiddenField();
+
+                // debugger
+               // Make an asynchronous request to delete the image from the server
+                $.ajax({
+                    url: custom_ajax.ajax_url,
+                    type: 'POST',
+                    data: { 
+                        imageUrl: imageUrl,
+                        action: 'delete_image' 
+                    },
+                    success: function(data) {
+                        // If the image is successfully deleted from the server, remove the image preview and update the hidden field
+                        // imageContainer.remove();
+                        console.log(data);
+                        // updateHiddenField();
+                    },
+                });
             });
             // Handle remove all images button click
             $('#my-image-remove-button').on('click', function(e) {
@@ -121,3 +135,6 @@
             }
         });
     })();
+
+
+

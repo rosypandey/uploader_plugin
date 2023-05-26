@@ -36,9 +36,13 @@ add_action('init', 'picperfect_create_custom_post_type');
   */
 function picperfects_enqueue_scripts() {
     wp_enqueue_media();
+    wp_register_script('ajax_script','https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js',null, null, true);
     // Enqueue your JavaScript file
-    wp_register_script( 'pic_script', plugins_url('assets/pic_script.js', __FILE__), array( 'jquery' ), NULL, true );
-    
+    wp_register_script( 'pic_script', plugins_url('assets/pic_script.js', __FILE__), array( 'jquery','ajax_script'), NULL, true );
+    // Localize the script with the AJAX URL.
+    wp_localize_script( 'pic_script', 'custom_ajax', array(
+        'ajax_url' => admin_url( 'admin-ajax.php' ),
+    ));
 }
 // Hook the function to the 'wp_enqueue_scripts' action
 add_action('admin_enqueue_scripts', 'picperfects_enqueue_scripts');
@@ -100,11 +104,15 @@ function my_image_metabox_callback($post) {
     // print_r($args);
     $attachments = get_posts($args);
     foreach ($attachments as $attachment) {
-        $image_src = wp_get_attachment_image_src($attachment->ID, 'thumbnail');
+        $image_src = wp_get_attachment_image_src($attachment->ID, 'full');
         $image_url = $image_src[0];
+        // print_r($image_url);
         ?>
         <div class="image-preview">
-            <img src=<?php echo $image_url; ?>  class="remove-image"></div>
+            <img src=<?php echo $image_url; ?>  >
+            <button class="remove-image">delete</button>
+        </div>
+    
         <?php
     }
     // Retrieve saved metadata
@@ -239,7 +247,7 @@ function picperfect_setting_callback(){
                 /> Enable Slider View
             </label><br><br>
             <label for="normal_view">
-                <input type="radio" name="view_type" id="normal_view" value="normal"
+                <input type="radio" name="view_type" id="normal_view" value="normal" 
                     <?php
                         if($post_view == 'normal'){
                             echo 'checked';
@@ -269,3 +277,25 @@ function picperfect_save_settings() {
     }
 }
 add_action('admin_init', 'picperfect_save_settings');
+
+
+
+function delete_image(){
+    if ( isset( $_POST['action'] ) == 'delete_image' ) {
+        $image_url = $_POST['imageUrl'];
+        // $attachment_id = get_attachment_id_from_url($image_url);
+        $attachment_id = attachment_url_to_postid( $image_url );
+        // print_r($attachment_id);
+        // print_r('here');
+       
+       $image_delete = wp_delete_attachment($attachment_id,true);
+        if($image_delete){
+            wp_send_json_success('Successfully Deleted');
+        }
+    }
+    wp_die();
+}
+add_action('wp_ajax_delete_image','delete_image');
+
+
+
